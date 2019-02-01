@@ -1,0 +1,84 @@
+---
+title: "Shiny_DataWrangling"
+author: "Terra Dressler"
+date: "January 30, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+```
+
+```{r, warning = FALSE, message = FALSE}
+
+fishes <- read_csv("All_Fish_All_Years_20171201.csv")
+
+```
+
+1. Fish count data wrangling, density calculation for each species at each site during each survey.
+
+```{r}
+fish_data <- fishes %>% 
+  select(year, month, site, transect, SIZE, COUNT, AREA, COMMON_NAME) %>%
+  filter(COMMON_NAME != "-99999", COMMON_NAME != "no fish present")
+
+ABUR <- fish_data %>% 
+  filter(site == "ABUR") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+AHND <- fish_data %>% 
+  filter(site == "AHND") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+AQUE <- fish_data %>% 
+  filter(site == "AQUE") %>% 
+ group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+BULL <- fish_data %>% 
+  filter(site == "BULL") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+  
+CARP <- fish_data %>% 
+  filter(site == "CARP") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+GOLB <- fish_data %>% 
+  filter(site == "GOLB") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+IVEE <- fish_data %>% 
+  filter(site == "IVEE") %>% 
+ group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+MOHK <- fish_data %>% 
+  filter(site == "MOHK") %>% 
+ group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+NAPL <- fish_data %>% 
+  filter(site == "NAPL") %>% 
+  group_by(year, COMMON_NAME) %>%
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+```
+
