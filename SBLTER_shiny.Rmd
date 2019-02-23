@@ -1,5 +1,5 @@
 ---
-title: "Shiny_DataWrangling"
+title: "Shiny_SBCLTER"
 author: "Terra Dressler"
 date: "January 30, 2019"
 output: html_document
@@ -9,15 +9,65 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+1. Load Packages
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 library(tidyverse)
+library(leaflet)
+library(sf)
+library(tmap)
+library(ggspatial)
+library(ggrepel)
 ```
+ 
+2. Read in Data
 
 ```{r, warning = FALSE, message = FALSE}
 
-fishes <- read_csv("All_Fish_All_Years_20171201.csv")
+SitePoints <- read_csv("Site_GPS.csv")
+fish <- read_csv("All_Fish_All_Years_20171201.csv")
+```
+
+3. Data merging and wrangling, density calculations
+
+```{r}
+
+SitePoints_edit<- SitePoints %>% 
+  rename(site = SiteName)
+
+FishSummary <- fish %>% 
+  select(year, month, site, transect, SIZE, COUNT, AREA, COMMON_NAME) %>%
+  filter(COMMON_NAME != "-99999", COMMON_NAME != "no fish present") %>% 
+  group_by(site, year, COMMON_NAME) %>% 
+  summarize(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80)
+
+fulldata = merge(FishSummary, SitePoints_edit)
+  
+fulldata_sf <- st_as_sf(fulldata, coords = c("LONG", "LAT"), crs = 4326)
 
 ```
+
+4. Temperature data wrangling, merging
+
+5. Mapping data
+
+```{r}
+#Mapping practice
+fulldata_kb_2017 <- fulldata_sf %>% 
+  filter(year == 2017, COMMON_NAME == "Kelp Bass") %>% 
+  mutate(size = density*50)
+
+
+map1 <- leaflet(fulldata_kb_2017) %>% 
+  addTiles() %>% 
+  addCircleMarkers(color = "red", radius = fulldata_kb_2017$size)
+
+map1
+```
+
+
+
+
 
 1. Fish count data wrangling, density calculation for each species at each site during each survey.
 
@@ -79,6 +129,34 @@ NAPL <- fish_data %>%
   group_by(year, COMMON_NAME) %>%
   summarise(SUM =sum(COUNT)) %>% 
   mutate(density = SUM/80)
+
+ABUR_graph <- ggplot(ABUR, aes(x = year, y = density, color = COMMON_NAME)) + 
+  geom_point(show.legend = FALSE)
+
+ABUR_graph
+
+
+`
+
+2. Fish trends over time
+
+```{r}
+#Senorita
+fish_summary <- fish_data %>% 
+  group_by(year, site, COMMON_NAME) %>% 
+  summarise(SUM = sum(COUNT)) %>% 
+  mutate(density = SUM/80) %>% 
+  filter(SUM != -99997, SUM!= -199944, SUM != -99984, SUM !=  -99971, COMMON_NAME== "Painted Greenling")
+
+fish_graph <- ggplot(fish_summary, aes(x = year, y = SUM)) + geom_point(show.legend = FALSE)
+
+fish_graph
+```
+
+
+
+
+
 
 ```
 
