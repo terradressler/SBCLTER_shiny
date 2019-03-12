@@ -19,7 +19,7 @@ library(ggspatial)
 library(ggrepel)
 ```
  
-2. Read in Data
+2. Read in Fish Data
 
 ```{r, warning = FALSE, message = FALSE}
 
@@ -29,25 +29,44 @@ fish <- read_csv("All_Fish_All_Years_20171201.csv")
 
 3. Data merging and wrangling, density calculations
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 
 SitePoints_edit<- SitePoints %>% 
   rename(site = SiteName)
 
 FishSummary <- fish %>% 
-  select(year, month, site, transect, SIZE, COUNT, AREA, COMMON_NAME) %>%
-  filter(COMMON_NAME != "-99999", COMMON_NAME != "no fish present") %>% 
+  select(year, month, date, site, transect, SIZE, COUNT, AREA, COMMON_NAME) %>%
+  filter(COMMON_NAME != "-99999", COMMON_NAME != "no fish present", COUNT != -99999) %>% 
   group_by(site, year, COMMON_NAME) %>% 
-  summarize(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
+  summarise(SUM =sum(COUNT)) %>% 
+  mutate(density = SUM/80) %>% 
+  filter(SUM != -99984 | SUM != -99971 | SUM != -99997)
 
-fulldata = merge(FishSummary, SitePoints_edit)
+
+fulldatafish = merge(FishSummary, SitePoints_edit)
   
-fulldata_sf <- st_as_sf(fulldata, coords = c("LONG", "LAT"), crs = 4326)
+fulldatafish_sf <- st_as_sf(fulldata, coords = c("LONG", "LAT"), crs = 4326)
 
 ```
 
 4. Temperature data wrangling, merging
+
+```{r, warning = FALSE, message = FALSE}
+temp_short <-read_csv("bottom_temp_all_years_20171201.csv") %>% 
+  separate(Date, c("y", "m", "d")) %>% 
+  group_by(site, y) %>%
+  summarise(mean_temp = mean(temp_c)) %>% 
+  rename(year = y)
+
+write.csv(temp_short, "tempdata_shortened.csv")
+  
+
+fulldata_temp <- merge(fulldata, temp_short)
+
+fulldata_sf <- st_as_sf(fulldata_temp, coords = c("LONG", "LAT"), crs = 4326)
+
+```
+
 
 5. Mapping data
 
@@ -57,100 +76,34 @@ fulldata_kb_2017 <- fulldata_sf %>%
   filter(year == 2017, COMMON_NAME == "Kelp Bass") %>% 
   mutate(size = density*50)
 
+fishIcons <- iconList( fish = makeIcon("fish.png", 18, 18) )
 
-map1 <- leaflet(fulldata_kb_2017) %>% 
-  addTiles() %>% 
-  addCircleMarkers(color = "red", radius = fulldata_kb_2017$size)
+map1 <- leaflet(fulldata_sf) %>% 
+  addProviderTiles("CartoDB.Positron") %>%
+  addCircleMarkers(color = "orange", fillOpacity = fulldata_sf$mean_temp)
+  addCircleMarkers(map1, color = "darkmagenta", radius = fulldata_sf$density)
 
 map1
 ```
 
 
-
-
-
-1. Fish count data wrangling, density calculation for each species at each site during each survey.
+6. Plot
 
 ```{r}
-fish_data <- fishes %>% 
-  select(year, month, site, transect, SIZE, COUNT, AREA, COMMON_NAME) %>%
-  filter(COMMON_NAME != "-99999", COMMON_NAME != "no fish present")
 
-ABUR <- fish_data %>% 
-  filter(site == "ABUR") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-AHND <- fish_data %>% 
-  filter(site == "AHND") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-AQUE <- fish_data %>% 
-  filter(site == "AQUE") %>% 
- group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-BULL <- fish_data %>% 
-  filter(site == "BULL") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
+plot <- fulldata_sf %>% 
+  filter(COMMON_NAME == "Kelp Bass", site == "ABUR") %>% 
+  ggplot(aes(x = year, y = density))+
+         geom_col(position = position_dodge(0), fill = "darkmagenta" )+
+  labs(x = "Year", y= "Observed Fish Density")+
+  scale_y_continuous(sec.axis = sec_axis(~.+14, name = "Mean Yearly Temperature (Celcius)"))
   
-CARP <- fish_data %>% 
-  filter(site == "CARP") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-GOLB <- fish_data %>% 
-  filter(site == "GOLB") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-IVEE <- fish_data %>% 
-  filter(site == "IVEE") %>% 
- group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-MOHK <- fish_data %>% 
-  filter(site == "MOHK") %>% 
- group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-NAPL <- fish_data %>% 
-  filter(site == "NAPL") %>% 
-  group_by(year, COMMON_NAME) %>%
-  summarise(SUM =sum(COUNT)) %>% 
-  mutate(density = SUM/80)
-
-ABUR_graph <- ggplot(ABUR, aes(x = year, y = density, color = COMMON_NAME)) + 
-  geom_point(show.legend = FALSE)
-
-ABUR_graph
+  
 
 
-`
-
-2. Fish trends over time
-
-```{r}
-#Senorita
-fish_summary <- fish_data %>% 
-  group_by(year, site, COMMON_NAME) %>% 
-  summarise(SUM = sum(COUNT)) %>% 
-  mutate(density = SUM/80) %>% 
-  filter(SUM != -99997, SUM!= -199944, SUM != -99984, SUM !=  -99971, COMMON_NAME== "Painted Greenling")
-
-fish_graph <- ggplot(fish_summary, aes(x = year, y = SUM)) + geom_point(show.legend = FALSE)
-
-fish_graph
+plot
+               
+    
 ```
 
 
